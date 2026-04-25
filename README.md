@@ -123,7 +123,7 @@ docs/
 | `npm run web`               | Start Expo web target.                                  |
 | `npm run typecheck`         | Run TypeScript without emitting files.                  |
 | `npm run lint`              | Run ESLint and Prettier checks.                         |
-| `npm run lint-staged`       | Run lint-staged on staged files.                        |
+| `npm run lint:staged`       | Run lint-staged on staged files.                        |
 | `npm run format`            | Auto-fix ESLint issues and format supported files.      |
 | `npm run verify`            | Run typecheck, lint, and tests locally.                 |
 | `npm test`                  | Run Jest tests.                                         |
@@ -157,7 +157,7 @@ with the desired platform and EAS profile.
 
 This repository uses Husky and lint-staged.
 
-- `pre-commit` runs `npm run lint-staged`.
+- `pre-commit` runs `npm run lint:staged`.
 - `pre-push` runs TypeScript and Jest checks.
 
 Install hooks after cloning:
