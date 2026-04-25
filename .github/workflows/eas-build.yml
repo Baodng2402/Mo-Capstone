@@ -1,0 +1,96 @@
+name: EAS Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to build
+        required: true
+        default: android
+        type: choice
+        options:
+          - android
+          - ios
+          - all
+      profile:
+        description: EAS build profile
+        required: true
+        default: preview
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+      wait:
+        description: Wait for EAS build completion
+        required: true
+        default: false
+        type: boolean
+
+concurrency:
+  group: eas-build-${{ github.workflow }}-${{ github.ref }}-${{ inputs.platform }}-${{ inputs.profile }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ inputs.platform }} (${{ inputs.profile }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      CI: true
+      EXPO_NO_TELEMETRY: 1
+      HUSKY: 0
+      NODE_OPTIONS: --max_old_space_size=4096
+
+    steps:
+      - name: Check EXPO_TOKEN
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::Missing EXPO_TOKEN. Add it in GitHub repository secrets before running EAS builds."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          packager: npm
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run quality gate before build
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test -- --runInBand --passWithNoTests
+
+      - name: Start EAS build
+        run: |
+          WAIT_FLAG="--no-wait"
+          if [ "${{ inputs.wait }}" = "true" ]; then
+            WAIT_FLAG="--wait"
+          fi
+
+          eas build \
+            --platform "${{ inputs.platform }}" \
+            --profile "${{ inputs.profile }}" \
+            --non-interactive \
+            "$WAIT_FLAG"
